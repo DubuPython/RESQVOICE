@@ -4,11 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RESQVOICE Dashboard</title>
-    <!-- UPDATED PATH -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="app-container">
+    <!-- SECURE LOGIN OVERLAY -->
+    <div id="auth-screen" class="auth-overlay">
+        <div class="auth-card">
+            <div class="logo" style="justify-content: center; margin-bottom: 20px;">
+                <span class="icon">🛡️</span> RESQVOICE
+            </div>
+            <h2>Admin Portal</h2>
+            <input type="email" id="auth-email" placeholder="Email Address">
+            <input type="password" id="auth-password" placeholder="Password">
+            <div class="auth-buttons">
+                <button id="login-btn" class="btn-blue">Login</button>
+                <button id="signup-btn" class="btn-white">Sign Up</button>
+            </div>
+            <p id="auth-error" class="red" style="display:none; margin-top:10px; font-size:0.8rem; text-align:center;"></p>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD (Hidden until logged in) -->
+    <div id="main-app" class="app-container" style="display: none;">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="logo">
@@ -22,7 +39,7 @@
                 <a href="#" class="nav-item" data-target="analytics-view">Analytics</a>
             </nav>
             <div class="nav-bottom">
-                <a href="#" class="nav-item">Logout</a>
+                <a href="#" class="nav-item" id="logout-btn">Logout</a>
             </div>
         </aside>
 
@@ -222,11 +239,12 @@
         </main>
     </div>
     
-    <!-- Firebase SDKs (Compat version for Vanilla JS) -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     
-    <!-- UPDATED PATH -->
+    <!-- Custom Application Logic -->
     <script src="script.js"></script>
 </body>
 </html>

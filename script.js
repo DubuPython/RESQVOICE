@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================
     // 2. Central State Management
     // =========================================
-    // Alerts array starts empty and awaits real data from Firebase
     const GlobalState = {
         alerts: [], 
         history: [
@@ -33,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'Mic Unit D-01', status: 'Offline', battery: 0, signal: 'None', location: 'Building D - CR 1' }
         ],
         recentActivity: [
-            { time: '08:50 AM', message: 'Firebase real-time connection established' }
+            { time: '08:50 AM', message: 'System armed and awaiting alerts.' }
         ],
         stats: {
             resolvedCases: 1,
@@ -174,31 +173,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('click', (e) => {
-        // RESPOND BUTTON
         if (e.target.classList.contains('respond-btn')) {
             const id = e.target.getAttribute('data-id');
             const alertIndex = GlobalState.alerts.findIndex(a => a.id === id);
             
             if (alertIndex > -1) {
                 const alert = GlobalState.alerts[alertIndex];
-                
                 if (alert.level === 'Critical') {
                     alert.status = 'Resolved (Guards Dispatched)';
                     GlobalState.stats.resolvedCases++;
-                    
-                    GlobalState.history.unshift({
-                        time: getFormattedDateTime(),
-                        classification: alert.classification,
-                        location: alert.location,
-                        status: 'Resolved'
-                    });
-                    
-                    GlobalState.recentActivity.unshift({
-                        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-                        message: `Personnel assigned and resolved Alert ${alert.id}`
-                    });
-                    
-                    // Remove from active alerts queue upon resolve
+                    GlobalState.history.unshift({ time: getFormattedDateTime(), classification: alert.classification, location: alert.location, status: 'Resolved' });
+                    GlobalState.recentActivity.unshift({ time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), message: `Personnel assigned and resolved Alert ${alert.id}` });
                     GlobalState.alerts.splice(alertIndex, 1);
                 } else {
                     alert.status = 'Investigating';
@@ -207,34 +192,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // RESTART DEVICE BUTTON
         if (e.target.classList.contains('restart-btn')) {
             const id = e.target.getAttribute('data-id');
             const device = GlobalState.devices.find(d => d.id === id);
             if (device) {
                 device.status = 'Rebooting';
                 renderApp();
-                setTimeout(() => {
-                    device.status = 'Online';
-                    renderApp();
-                }, 3000);
+                setTimeout(() => { device.status = 'Online'; renderApp(); }, 3000);
             }
         }
 
-        // VIEW DEVICE/ALERT DETAILS
         if (e.target.classList.contains('view-btn') || e.target.classList.contains('view-device')) {
             const id = e.target.getAttribute('data-id');
             openModal(`Viewing: ${id}`, `<p>Pulling full sensor diagnostic logs from database...</p><br><p>📡 <strong>Signal:</strong> Optimal</p><p>🕒 <strong>Uptime:</strong> Validated</p>`);
         }
 
-        // TROUBLESHOOT BUTTON
         if (e.target.classList.contains('troubleshoot-btn')) {
             openModal('Device Diagnostic', `<p>Unit is currently unreachable.</p><ul><li>Verify 3.3V power supply.</li><li>Check Firebase connection drops.</li></ul><p style="color: var(--accent-red);">Recommendation: Physical reboot required.</p>`);
         }
     });
 
     // =========================================
-    // 5. Firebase Real-Time Integration
+    // 5. Firebase Real-Time & Auth Integration
     // =========================================
     
     const firebaseConfig = {
@@ -249,7 +228,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
+    const auth = firebase.auth();
 
+    // --- AUTHENTICATION LOGIC ---
+    const authScreen = document.getElementById('auth-screen');
+    const mainApp = document.getElementById('main-app');
+    const emailInput = document.getElementById('auth-email');
+    const passInput = document.getElementById('auth-password');
+    const authError = document.getElementById('auth-error');
+    
+    let isListening = false;
+
+    // Listen for Auth State Changes
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            authScreen.style.display = 'none';
+            mainApp.style.display = 'flex';
+            
+            // Only start the database listener once logged in to prevent duplicate bindings
+            if (!isListening) {
+                listenForRealtimeAlerts(); 
+                isListening = true;
+            }
+        } else {
+            authScreen.style.display = 'flex';
+            mainApp.style.display = 'none';
+        }
+    });
+
+    // Login Button
+    document.getElementById('login-btn').addEventListener('click', () => {
+        auth.signInWithEmailAndPassword(emailInput.value, passInput.value)
+            .catch((error) => {
+                authError.innerText = error.message;
+                authError.style.display = 'block';
+            });
+    });
+
+    // Signup Button
+    document.getElementById('signup-btn').addEventListener('click', () => {
+        auth.createUserWithEmailAndPassword(emailInput.value, passInput.value)
+            .catch((error) => {
+                authError.innerText = error.message;
+                authError.style.display = 'block';
+            });
+    });
+
+    // Logout Button
+    document.getElementById('logout-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        auth.signOut();
+    });
+
+    // --- DATABASE LISTENER ---
     const listenForRealtimeAlerts = () => {
         const alertsRef = database.ref('alerts');
         
@@ -273,13 +304,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (GlobalState.recentActivity.length > 4) GlobalState.recentActivity.pop();
-            
-            // Instantly sync UI the millisecond data hits the database
             renderApp(); 
         });
     };
 
-    // Boot Up Application
+    // Boot UI (Hidden until Auth verified)
     renderApp();
-    listenForRealtimeAlerts();
 });
