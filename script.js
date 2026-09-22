@@ -23,24 +23,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================
     const GlobalState = {
         alerts: [], 
-        history: [
-            { time: 'May 30, 2026 - 11:25 AM', classification: 'Emergency Distress', location: 'Building A - Comfort Room 2', status: 'Resolved' }
-        ],
+        history: [],
         devices: [
-            { id: 'Mic Unit A-01', status: 'Online', battery: 95, signal: 'Strong', location: 'Building A - CR 2' },
-            { id: 'Mic Unit B-01', status: 'Online', battery: 88, signal: 'Strong', location: 'Building B - CR 1' },
-            { id: 'Mic Unit D-01', status: 'Offline', battery: 0, signal: 'None', location: 'Building D - CR 1' }
+            { id: 'ESP32 Main Unit', status: 'Online', battery: 100, signal: 'Strong', location: 'Lab Room 1' }
         ],
         recentActivity: [
-            { time: '08:50 AM', message: 'System armed and awaiting alerts.' }
+            { time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), message: 'System armed and awaiting alerts.' }
         ],
         stats: {
-            resolvedCases: 1,
-            totalIncidents: 1,
-            avgResponse: 18,
+            resolvedCases: 0,
+            totalIncidents: 0,
+            avgResponse: 0,
             trends: [
-                { month: 'May', count: 19, width: 80 },
-                { month: 'April', count: 15, width: 60 }
+                { month: 'Current', count: 0, width: 5 }
             ]
         }
     };
@@ -118,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
 
-        // DEVICE MANAGEMENT UPDATES
+        // DEVICE MANAGEMENT UPDATES (Includes Edit Feature)
         document.getElementById('dm-device-grid').innerHTML = GlobalState.devices.map(d => `
             <div class="alert-card ${d.status === 'Online' ? 'border-green' : 'border-red'}">
                 <h3>${d.id}</h3>
@@ -127,10 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p><strong>Signal:</strong> ${d.signal}</p>
                 <p><strong>Location:</strong> ${d.location}</p>
                 <div class="card-buttons">
-                    <button class="btn-blue view-device" data-id="${d.id}">View</button>
-                    ${d.status === 'Offline' 
-                        ? `<button class="btn-red troubleshoot-btn" data-id="${d.id}">Troubleshoot</button>` 
-                        : `<button class="btn-blue restart-btn" data-id="${d.id}" ${d.status==='Rebooting'?'disabled style="opacity:0.5"':''}>Restart</button>`}
+                    <button class="btn-white edit-device-btn" data-id="${d.id}">Edit</button>
+                    <button class="btn-blue restart-btn" data-id="${d.id}" ${d.status==='Rebooting'?'disabled style="opacity:0.5"':''}>Restart</button>
                 </div>
             </div>
         `).join('');
@@ -173,6 +166,40 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('click', (e) => {
+        // Open Edit Device Modal
+        if (e.target.classList.contains('edit-device-btn')) {
+            const id = e.target.getAttribute('data-id');
+            const device = GlobalState.devices.find(d => d.id === id);
+            if (device) {
+                const formHtml = `
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <label style="color:var(--text-secondary); font-size:0.9rem;">Device Name</label>
+                        <input type="text" id="edit-dev-name" value="${device.id}" style="padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-main); color:white; font-size:1rem;">
+                        <label style="color:var(--text-secondary); font-size:0.9rem; margin-top:10px;">Deployment Location</label>
+                        <input type="text" id="edit-dev-loc" value="${device.location}" style="padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-main); color:white; font-size:1rem;">
+                        <button id="save-device-btn" class="btn-blue" data-old-id="${device.id}" style="margin-top:20px; padding:12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Save Changes</button>
+                    </div>
+                `;
+                openModal('Edit Device Settings', formHtml);
+            }
+        }
+
+        // Save Edit Device Changes
+        if (e.target.id === 'save-device-btn') {
+            const oldId = e.target.getAttribute('data-old-id');
+            const newName = document.getElementById('edit-dev-name').value;
+            const newLoc = document.getElementById('edit-dev-loc').value;
+            
+            const deviceIndex = GlobalState.devices.findIndex(d => d.id === oldId);
+            if (deviceIndex > -1) {
+                GlobalState.devices[deviceIndex].id = newName;
+                GlobalState.devices[deviceIndex].location = newLoc;
+                renderApp();
+                document.getElementById('action-modal').style.display = 'none';
+            }
+        }
+
+        // Respond Action
         if (e.target.classList.contains('respond-btn')) {
             const id = e.target.getAttribute('data-id');
             const alertIndex = GlobalState.alerts.findIndex(a => a.id === id);
@@ -192,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Restart Device Action
         if (e.target.classList.contains('restart-btn')) {
             const id = e.target.getAttribute('data-id');
             const device = GlobalState.devices.find(d => d.id === id);
@@ -202,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // View Diagnostic Action
         if (e.target.classList.contains('view-btn') || e.target.classList.contains('view-device')) {
             const id = e.target.getAttribute('data-id');
             openModal(`Viewing: ${id}`, `<p>Pulling full sensor diagnostic logs from database...</p><br><p>📡 <strong>Signal:</strong> Optimal</p><p>🕒 <strong>Uptime:</strong> Validated</p>`);
@@ -215,7 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================
     // 5. Firebase Real-Time & Auth Integration
     // =========================================
-    
     const firebaseConfig = {
         apiKey: "AIzaSyAiz2lYPjxDu8oqAynQMUWUqj29Zb6DJk8",
         authDomain: "resqvoice-49320.firebaseapp.com",
@@ -230,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const database = firebase.database();
     const auth = firebase.auth();
 
-    // --- AUTHENTICATION LOGIC ---
     const authScreen = document.getElementById('auth-screen');
     const mainApp = document.getElementById('main-app');
     const emailInput = document.getElementById('auth-email');
@@ -239,13 +266,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let isListening = false;
 
-    // Listen for Auth State Changes
     auth.onAuthStateChanged((user) => {
         if (user) {
             authScreen.style.display = 'none';
             mainApp.style.display = 'flex';
             
-            // Only start the database listener once logged in to prevent duplicate bindings
             if (!isListening) {
                 listenForRealtimeAlerts(); 
                 isListening = true;
@@ -256,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Login Button
     document.getElementById('login-btn').addEventListener('click', () => {
         auth.signInWithEmailAndPassword(emailInput.value, passInput.value)
             .catch((error) => {
@@ -265,7 +289,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     });
 
-    // Signup Button
     document.getElementById('signup-btn').addEventListener('click', () => {
         auth.createUserWithEmailAndPassword(emailInput.value, passInput.value)
             .catch((error) => {
@@ -274,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     });
 
-    // Logout Button
     document.getElementById('logout-btn').addEventListener('click', (e) => {
         e.preventDefault();
         auth.signOut();
@@ -288,19 +310,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const alertData = snapshot.val();
             const newId = `AL-${Math.floor(Math.random() * 900) + 100}`;
             
+            // Fetches the dynamically saved location from your newly editable device array
+            const targetDevice = GlobalState.devices.find(d => d.id === (alertData.location || "ESP32 Main Unit"));
+            const dynamicLocation = targetDevice ? targetDevice.location : (alertData.location || "Unknown Location");
+            
+            // Generates the accurate time stamp instantly if it is missing from the payload
+            const dynamicTime = alertData.time || getFormattedDateTime().split(' - ')[1];
+
             GlobalState.alerts.unshift({
                 id: newId,
-                location: alertData.location || "Unknown Location",
+                location: dynamicLocation,
                 classification: alertData.level === 'Critical' ? 'Emergency Distress' : 'Possible Distress',
                 level: alertData.level || "Warning",
-                time: alertData.time || getFormattedDateTime().split(' - ')[1],
+                time: dynamicTime,
                 status: 'Pending'
             });
             
             GlobalState.stats.totalIncidents++;
             GlobalState.recentActivity.unshift({
-                time: alertData.time || getFormattedDateTime().split(' - ')[1],
-                message: `New ${alertData.level} alert triggered at ${alertData.location}`
+                time: dynamicTime,
+                message: `New ${alertData.level} alert triggered at ${dynamicLocation}`
             });
             
             if (GlobalState.recentActivity.length > 4) GlobalState.recentActivity.pop();
@@ -308,6 +337,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Boot UI (Hidden until Auth verified)
     renderApp();
 });
