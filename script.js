@@ -25,7 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
         alerts: [], 
         history: [],
         devices: [
-            { id: 'ESP32 Main Unit', status: 'Online', battery: 100, signal: 'Strong', location: 'Lab Room 1' }
+            // "id" is the immutable hardware link to the ESP32. 
+            // "name" is the display name you can edit on the dashboard.
+            { id: 'ESP32 Main Unit', name: 'ESP32 Main Unit', status: 'Online', battery: 100, signal: 'Strong', location: 'Lab Room 1' }
         ],
         recentActivity: [
             { time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), message: 'System armed and awaiting alerts.' }
@@ -74,9 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <li><span class="time">${act.time}</span><p>${act.message}</p></li>
         `).join('');
 
+        // Uses d.name instead of d.id so it shows your custom name
         document.getElementById('dashboard-devices-mini').innerHTML = GlobalState.devices.map(d => `
             <tr>
-                <td>${d.id}</td>
+                <td>${d.name}</td>
                 <td class="${d.status === 'Online' ? 'green' : 'red'}">${d.status}</td>
             </tr>
         `).join('');
@@ -113,10 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
 
-        // DEVICE MANAGEMENT UPDATES (Includes Edit Feature)
+        // DEVICE MANAGEMENT UPDATES (Uses d.name)
         document.getElementById('dm-device-grid').innerHTML = GlobalState.devices.map(d => `
             <div class="alert-card ${d.status === 'Online' ? 'border-green' : 'border-red'}">
-                <h3>${d.id}</h3>
+                <h3>${d.name}</h3>
                 <p><strong>Status:</strong> <span class="${d.status === 'Online' ? 'green' : (d.status === 'Rebooting' ? 'text-secondary' : 'red')}">${d.status}</span></p>
                 <p><strong>Battery:</strong> ${d.battery}%</p>
                 <p><strong>Signal:</strong> ${d.signal}</p>
@@ -166,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('click', (e) => {
-        // Open Edit Device Modal
+        // Open Edit Device Modal (Now edits "name" instead of "id")
         if (e.target.classList.contains('edit-device-btn')) {
             const id = e.target.getAttribute('data-id');
             const device = GlobalState.devices.find(d => d.id === id);
@@ -174,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const formHtml = `
                     <div style="display:flex; flex-direction:column; gap:10px;">
                         <label style="color:var(--text-secondary); font-size:0.9rem;">Device Name</label>
-                        <input type="text" id="edit-dev-name" value="${device.id}" style="padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-main); color:white; font-size:1rem;">
+                        <input type="text" id="edit-dev-name" value="${device.name}" style="padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-main); color:white; font-size:1rem;">
                         <label style="color:var(--text-secondary); font-size:0.9rem; margin-top:10px;">Deployment Location</label>
                         <input type="text" id="edit-dev-loc" value="${device.location}" style="padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-main); color:white; font-size:1rem;">
                         <button id="save-device-btn" class="btn-blue" data-old-id="${device.id}" style="margin-top:20px; padding:12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Save Changes</button>
@@ -192,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const deviceIndex = GlobalState.devices.findIndex(d => d.id === oldId);
             if (deviceIndex > -1) {
-                GlobalState.devices[deviceIndex].id = newName;
+                GlobalState.devices[deviceIndex].name = newName; // Safely updates display name only
                 GlobalState.devices[deviceIndex].location = newLoc;
                 renderApp();
                 document.getElementById('action-modal').style.display = 'none';
@@ -302,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         auth.signOut();
     });
 
-    // --- DATABASE LISTENER ---
+    // --- DATABASE LISTENER (Patched for custom names) ---
     const listenForRealtimeAlerts = () => {
         const alertsRef = database.ref('alerts');
         
@@ -310,16 +313,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const alertData = snapshot.val();
             const newId = `AL-${Math.floor(Math.random() * 900) + 100}`;
             
-            // Fetches the dynamically saved location from your newly editable device array
-            const targetDevice = GlobalState.devices.find(d => d.id === (alertData.location || "ESP32 Main Unit"));
-            const dynamicLocation = targetDevice ? targetDevice.location : (alertData.location || "Unknown Location");
+            // Link the incoming ESP32 payload to the correct device hardware ID
+            const incomingHardwareId = alertData.location || "ESP32 Main Unit";
+            const targetDevice = GlobalState.devices.find(d => d.id === incomingHardwareId);
             
-            // Generates the accurate time stamp instantly if it is missing from the payload
+            // Extract the user-edited location and name for the UI
+            const dynamicLocation = targetDevice ? targetDevice.location : "Unknown Location";
+            const dynamicDeviceName = targetDevice ? targetDevice.name : incomingHardwareId;
             const dynamicTime = alertData.time || getFormattedDateTime().split(' - ')[1];
 
             GlobalState.alerts.unshift({
                 id: newId,
-                location: dynamicLocation,
+                location: dynamicLocation, // Now displays "CR 1 Ground level"
                 classification: alertData.level === 'Critical' ? 'Emergency Distress' : 'Possible Distress',
                 level: alertData.level || "Warning",
                 time: dynamicTime,
@@ -329,7 +334,8 @@ document.addEventListener('DOMContentLoaded', () => {
             GlobalState.stats.totalIncidents++;
             GlobalState.recentActivity.unshift({
                 time: dynamicTime,
-                message: `New ${alertData.level} alert triggered at ${dynamicLocation}`
+                // Now displays: "New Critical alert triggered at CR 1 Ground level (RESQVOICE SENSOR 1)"
+                message: `New ${alertData.level} alert triggered at ${dynamicLocation} (${dynamicDeviceName})`
             });
             
             if (GlobalState.recentActivity.length > 4) GlobalState.recentActivity.pop();
