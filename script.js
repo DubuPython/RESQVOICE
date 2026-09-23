@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================================
-    // 2. Central State Management (With LocalStorage)
+    // 2. Central State Management (With LocalStorage & Failsafe)
     // =========================================
     const defaultState = {
         alerts: [], 
@@ -35,6 +35,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const savedData = localStorage.getItem('resqvoice_data');
     const GlobalState = savedData ? JSON.parse(savedData) : defaultState;
+
+    // FAILSAFE: If the saved browser cache somehow has zero devices, instantly restore the default unit
+    if (!GlobalState.devices || GlobalState.devices.length === 0) {
+        GlobalState.devices = [
+            { id: 'ESP32 Main Unit', name: 'ESP32 Main Unit', status: 'Online', battery: 100, signal: 'Strong', location: 'Lab Room 1' }
+        ];
+        localStorage.setItem('resqvoice_data', JSON.stringify(GlobalState));
+    }
 
     const saveState = () => {
         localStorage.setItem('resqvoice_data', JSON.stringify(GlobalState));
