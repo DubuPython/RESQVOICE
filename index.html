@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RESQVOICE Dashboard</title>
+    <title>RESQVOICE Security Dashboard</title>
     <link rel="stylesheet" href="styles.css">
     
-    <!-- Firebase SDKs (Version 8 - Compatible with existing JS) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -16,7 +15,7 @@
     <!-- AUTHENTICATION SCREEN -->
     <div id="auth-screen" class="auth-container">
         <div class="auth-box">
-            <h2>RESQVOICE Login</h2>
+            <h2>RESQVOICE System</h2>
             <input type="email" id="auth-email" placeholder="Email Address">
             <input type="password" id="auth-password" placeholder="Password">
             <p id="auth-error" class="error-text"></p>
@@ -32,17 +31,21 @@
         
         <!-- SIDEBAR -->
         <nav class="sidebar">
-            <div class="logo"><h2>RESQVOICE</h2></div>
+            <div class="logo">
+                <span class="logo-icon">🎧</span>
+                <h2>RESQVOICE</h2>
+            </div>
             <ul class="nav-links">
                 <li><a href="#" class="nav-item active" data-target="view-dashboard">Dashboard</a></li>
                 <li><a href="#" class="nav-item" data-target="view-alerts">Active Alerts</a></li>
                 <li><a href="#" class="nav-item" data-target="view-history">Incident History</a></li>
                 <li><a href="#" class="nav-item" data-target="view-devices">Devices</a></li>
                 <li><a href="#" class="nav-item" data-target="view-analytics">Analytics</a></li>
+                <li><a href="#" class="nav-item" data-target="view-users">User Management</a></li>
+                <li><a href="#" class="nav-item" data-target="view-reports">Reports</a></li>
+                <li><a href="#" class="nav-item" data-target="view-settings">Settings</a></li>
+                <li><a href="#" id="logout-btn" class="nav-item btn-logout">Logout</a></li>
             </ul>
-            
-            <button id="reset-test-data-btn" class="btn-danger-outline">🗑️ Reset Test Data</button>
-            <button id="logout-btn" class="nav-item btn-logout">Logout</button>
         </nav>
 
         <!-- MAIN CONTENT AREA -->
@@ -51,41 +54,59 @@
             <!-- DASHBOARD VIEW -->
             <section id="view-dashboard" class="view-section" style="display: flex;">
                 <div class="header">
-                    <h1>Security Operations Center</h1>
+                    <div class="header-titles">
+                        <h1>Security Operations Center</h1>
+                    </div>
+                    <div class="user-badge">Security Admin</div>
                 </div>
                 
-                <div class="stats-grid">
+                <div class="stats-grid-4">
                     <div class="stat-card">
                         <h3>System Status</h3>
                         <p class="green">● Monitoring Active</p>
+                        <span class="sub-text">CNN Detection Running</span>
                     </div>
                     <div class="stat-card">
                         <h3>Active Alerts</h3>
                         <h2 id="dash-active-count" class="red">0</h2>
+                        <span class="sub-text">Critical Incidents</span>
                     </div>
                     <div class="stat-card">
                         <h3>Connected Devices</h3>
                         <h2 id="dash-device-count">0 / 0</h2>
+                        <span class="sub-text">Online Devices</span>
                     </div>
                     <div class="stat-card">
-                        <h3>Avg Response</h3>
+                        <h3>Average Response</h3>
                         <h2 id="dash-avg-response">0s</h2>
+                        <span class="sub-text">Response Time</span>
                     </div>
                 </div>
 
-                <div class="split-grid">
+                <div class="split-grid-dashboard">
                     <div class="panel">
-                        <h3>Active Incidents</h3>
+                        <div class="panel-header">
+                            <h3>Active Incidents</h3>
+                        </div>
                         <table class="data-table">
                             <thead>
-                                <tr><th>Time</th><th>Location</th><th>Level</th><th>Status</th></tr>
+                                <tr><th>Time</th><th>Location</th><th>Alert Level</th><th>Status</th></tr>
                             </thead>
                             <tbody id="dashboard-incidents"></tbody>
                         </table>
                     </div>
-                    <div class="panel">
-                        <h3>Recent Activity</h3>
-                        <ul id="dashboard-activity" class="activity-list"></ul>
+                    <div class="side-panels">
+                        <div class="panel">
+                            <h3>Recent Activity</h3>
+                            <ul id="dashboard-activity" class="activity-list"></ul>
+                        </div>
+                        <div class="panel">
+                            <h3>📡 Device Status</h3>
+                            <table class="data-table">
+                                <thead><tr><th>Device</th><th>Status</th></tr></thead>
+                                <tbody id="dashboard-devices-mini"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -93,51 +114,273 @@
             <!-- ACTIVE ALERTS VIEW -->
             <section id="view-alerts" class="view-section" style="display: none;">
                 <div class="header">
-                    <h1>Active Alerts</h1>
-                    <div class="sub-stats">
-                        <span>Critical: <strong id="aa-critical-count">0</strong></span>
-                        <span>Warning: <strong id="aa-warning-count">0</strong></span>
-                        <span>Resolved: <strong id="aa-resolved-count">0</strong></span>
+                    <div class="header-titles">
+                        <h1>Active Alerts</h1>
+                        <p class="subtitle">Real-Time Emergency Monitoring</p>
+                    </div>
+                    <div class="user-badge">Security Admin</div>
+                </div>
+                
+                <div class="stats-grid-3">
+                    <div class="stat-card border-top-red">
+                        <h3>Critical Alerts</h3>
+                        <h2 id="aa-critical-count" class="red">0</h2>
+                        <span class="sub-text">Immediate Response Needed</span>
+                    </div>
+                    <div class="stat-card border-top-yellow">
+                        <h3>Warning Alerts</h3>
+                        <h2 id="aa-warning-count" class="yellow">0</h2>
+                        <span class="sub-text">Under Investigation</span>
+                    </div>
+                    <div class="stat-card border-top-green">
+                        <h3>Resolved Today</h3>
+                        <h2 id="aa-resolved-count" class="green">0</h2>
+                        <span class="sub-text">Successfully Handled</span>
                     </div>
                 </div>
-                <div id="aa-cards-container" class="card-grid"></div>
+
+                <div id="aa-cards-container" class="card-grid-3"></div>
+
+                <div class="panel mt-20">
+                    <h3>Alert Queue</h3>
+                    <table class="data-table">
+                        <thead><tr><th>Alert ID</th><th>Location</th><th>Classification</th><th>Status</th><th>Priority</th></tr></thead>
+                        <tbody id="aa-queue-table"></tbody>
+                    </table>
+                </div>
             </section>
 
             <!-- INCIDENT HISTORY VIEW -->
             <section id="view-history" class="view-section" style="display: none;">
                 <div class="header">
-                    <h1>Incident History</h1>
-                    <div class="sub-stats">
-                        <span>Total: <strong id="ih-total-count">0</strong></span>
-                        <span>Resolved: <strong id="ih-resolved-count">0</strong></span>
-                        <span>Open: <strong id="ih-open-count">0</strong></span>
+                    <div class="header-titles">
+                        <h1>Incident History</h1>
+                        <p class="subtitle">Historical Records of Distress Events</p>
+                    </div>
+                    <div class="user-badge">Security Admin</div>
+                </div>
+
+                <div class="stats-grid-3">
+                    <div class="stat-card">
+                        <h3>Total Incidents</h3>
+                        <h2 id="ih-total-count">0</h2>
+                        <span class="sub-text">Recorded Events</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Resolved Cases</h3>
+                        <h2 id="ih-resolved-count" class="green">0</h2>
+                        <span class="sub-text">Successfully Handled</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Open Cases</h3>
+                        <h2 id="ih-open-count" class="red">0</h2>
+                        <span class="sub-text">Under Investigation</span>
                     </div>
                 </div>
-                <div id="ih-timeline-container" class="timeline"></div>
+
+                <div class="panel search-panel">
+                    <input type="text" placeholder="Search Incident..." class="search-bar">
+                    <button class="btn-blue">Search</button>
+                </div>
+
+                <div class="panel">
+                    <h3>Incident Timeline</h3>
+                    <div id="ih-timeline-container" class="timeline"></div>
+                </div>
             </section>
 
             <!-- DEVICES VIEW -->
             <section id="view-devices" class="view-section" style="display: none;">
                 <div class="header">
-                    <h1>Device Management</h1>
+                    <div class="header-titles">
+                        <h1>Device Management</h1>
+                        <p class="subtitle">Monitor Connected IoT Devices</p>
+                    </div>
+                    <div class="user-badge">Security Admin</div>
                 </div>
-                <div id="dm-device-grid" class="card-grid"></div>
+
+                <div class="stats-grid-3">
+                    <div class="stat-card">
+                        <h3>Connected Devices</h3>
+                        <h2 id="dm-total">0</h2>
+                        <span class="sub-text">Active Monitoring Units</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Online Devices</h3>
+                        <h2 id="dm-online" class="green">0</h2>
+                        <span class="sub-text">Operational</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Offline Devices</h3>
+                        <h2 id="dm-offline" class="red">0</h2>
+                        <span class="sub-text">Needs Maintenance</span>
+                    </div>
+                </div>
+
+                <div id="dm-device-grid" class="card-grid-2"></div>
             </section>
 
             <!-- ANALYTICS VIEW -->
             <section id="view-analytics" class="view-section" style="display: none;">
                 <div class="header">
-                    <h1>System Analytics</h1>
+                    <div class="header-titles">
+                        <h1>Security Analytics</h1>
+                        <p class="subtitle">ResQVoice Monitoring Intelligence Center</p>
+                    </div>
+                    <div class="user-badge">Security Admin</div>
                 </div>
-                <div class="split-grid">
+
+                <div class="stats-grid-4">
+                    <div class="stat-card text-center">
+                        <h3>Total Incidents</h3>
+                        <h2 id="an-total">0</h2>
+                    </div>
+                    <div class="stat-card text-center">
+                        <h3>Emergency Cases</h3>
+                        <h2 id="an-emergency" class="red">0</h2>
+                    </div>
+                    <div class="stat-card text-center">
+                        <h3>Possible Distress</h3>
+                        <h2 id="an-warning">0</h2>
+                    </div>
+                    <div class="stat-card text-center">
+                        <h3>Avg Response</h3>
+                        <h2 id="an-avg">0s</h2>
+                    </div>
+                </div>
+
+                <div class="split-grid-dashboard">
                     <div class="panel">
-                        <h3>Monthly Trends</h3>
+                        <h3>Monthly Incident Trends</h3>
                         <div id="an-monthly-trends" class="chart-container"></div>
                     </div>
                     <div class="panel">
-                        <h3>Incident Distribution</h3>
+                        <h3>Alert Distribution</h3>
                         <div id="an-distribution" class="chart-container"></div>
                     </div>
+                </div>
+
+                <div class="stats-grid-3 mt-20">
+                    <div class="stat-card text-center">
+                        <span class="sub-text">Detection Accuracy</span>
+                        <h2 class="green">95%</h2>
+                    </div>
+                    <div class="stat-card text-center">
+                        <span class="sub-text">Response Success Rate</span>
+                        <h2>92%</h2>
+                    </div>
+                    <div class="stat-card text-center">
+                        <span class="sub-text">Device Availability</span>
+                        <h2>98%</h2>
+                    </div>
+                </div>
+            </section>
+
+            <!-- USER MANAGEMENT VIEW -->
+            <section id="view-users" class="view-section" style="display: none;">
+                <div class="header">
+                    <div class="header-titles">
+                        <h1>User Management</h1>
+                        <p class="subtitle">Manage Authorized Security Personnel</p>
+                    </div>
+                    <div class="user-badge">Security Admin</div>
+                </div>
+
+                <div class="stats-grid-3">
+                    <div class="stat-card">
+                        <h3>Total Users</h3>
+                        <h2>8</h2>
+                        <span class="sub-text">Registered Personnel</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Administrators</h3>
+                        <h2>2</h2>
+                        <span class="sub-text">System Managers</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Security Personnel</h3>
+                        <h2>6</h2>
+                        <span class="sub-text">Active Guards</span>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Personnel Directory</h3>
+                        <button class="btn-blue">+ Add User</button>
+                    </div>
+                    <div id="um-user-grid" class="card-grid-3 mt-20"></div>
+                </div>
+            </section>
+
+            <!-- REPORTS MANAGEMENT VIEW -->
+            <section id="view-reports" class="view-section" style="display: none;">
+                <div class="header">
+                    <div class="header-titles">
+                        <h1>Reports Management</h1>
+                        <p class="subtitle">Generate and Review Security Reports</p>
+                    </div>
+                    <div class="user-badge">Security Admin</div>
+                </div>
+
+                <div class="stats-grid-4">
+                    <div class="stat-card text-center">
+                        <h3>Total Reports</h3>
+                        <h2>24</h2>
+                    </div>
+                    <div class="stat-card text-center">
+                        <h3>Daily Reports</h3>
+                        <h2>12</h2>
+                    </div>
+                    <div class="stat-card text-center">
+                        <h3>Weekly Reports</h3>
+                        <h2>8</h2>
+                    </div>
+                    <div class="stat-card text-center">
+                        <h3>Monthly Reports</h3>
+                        <h2>4</h2>
+                    </div>
+                </div>
+
+                <div class="card-grid-3">
+                    <div class="panel">
+                        <h3>Daily Monitoring Report</h3>
+                        <p class="sub-text mb-10">Summary of all distress alerts, incidents, and responses recorded today.</p>
+                        <div class="card-buttons"><button class="btn-blue">View</button><button class="btn-green">Download PDF</button></div>
+                    </div>
+                    <div class="panel">
+                        <h3>Weekly Security Report</h3>
+                        <p class="sub-text mb-10">Weekly analysis of distress detections, response times, and device activity.</p>
+                        <div class="card-buttons"><button class="btn-blue">View</button><button class="btn-green">Download PDF</button></div>
+                    </div>
+                    <div class="panel">
+                        <h3>Monthly Incident Report</h3>
+                        <p class="sub-text mb-10">Comprehensive overview of incidents, emergency alerts, and security performance.</p>
+                        <div class="card-buttons"><button class="btn-blue">View</button><button class="btn-green">Download PDF</button></div>
+                    </div>
+                </div>
+
+                <div class="panel mt-20">
+                    <h3>Report History</h3>
+                    <table class="data-table">
+                        <thead><tr><th>Report Name</th><th>Date Generated</th><th>Type</th><th>Status</th></tr></thead>
+                        <tbody id="rm-report-table"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SETTINGS VIEW (For Reset Button) -->
+            <section id="view-settings" class="view-section" style="display: none;">
+                <div class="header">
+                    <div class="header-titles">
+                        <h1>System Settings</h1>
+                        <p class="subtitle">Configuration and Developer Tools</p>
+                    </div>
+                </div>
+                <div class="panel" style="border-left: 4px solid var(--danger);">
+                    <h3>Danger Zone</h3>
+                    <p class="sub-text mb-10">Wipe all local and remote database records for testing purposes.</p>
+                    <button id="reset-test-data-btn" class="btn-red">🗑️ Reset Test Data</button>
                 </div>
             </section>
         </main>
