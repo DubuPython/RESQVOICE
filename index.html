@@ -289,17 +289,17 @@
                 <div class="stats-grid-3">
                     <div class="stat-card">
                         <h3>Total Users</h3>
-                        <h2>8</h2>
+                        <h2 id="um-total-users">0</h2>
                         <span class="sub-text">Registered Personnel</span>
                     </div>
                     <div class="stat-card">
                         <h3>Administrators</h3>
-                        <h2>2</h2>
+                        <h2 id="um-admin-users">0</h2>
                         <span class="sub-text">System Managers</span>
                     </div>
                     <div class="stat-card">
                         <h3>Security Personnel</h3>
-                        <h2>6</h2>
+                        <h2 id="um-guard-users">0</h2>
                         <span class="sub-text">Active Guards</span>
                     </div>
                 </div>
@@ -307,7 +307,7 @@
                 <div class="panel">
                     <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
                         <h3>Personnel Directory</h3>
-                        <button class="btn-blue">+ Add User</button>
+                        <button id="add-user-btn" class="btn-blue">+ Add User</button>
                     </div>
                     <div id="um-user-grid" class="card-grid-3 mt-20"></div>
                 </div>
@@ -326,19 +326,19 @@
                 <div class="stats-grid-4">
                     <div class="stat-card text-center">
                         <h3>Total Reports</h3>
-                        <h2>24</h2>
+                        <h2 id="rm-total">0</h2>
                     </div>
                     <div class="stat-card text-center">
                         <h3>Daily Reports</h3>
-                        <h2>12</h2>
+                        <h2 id="rm-daily">0</h2>
                     </div>
                     <div class="stat-card text-center">
                         <h3>Weekly Reports</h3>
-                        <h2>8</h2>
+                        <h2 id="rm-weekly">0</h2>
                     </div>
                     <div class="stat-card text-center">
                         <h3>Monthly Reports</h3>
-                        <h2>4</h2>
+                        <h2 id="rm-monthly">0</h2>
                     </div>
                 </div>
 
@@ -346,17 +346,17 @@
                     <div class="panel">
                         <h3>Daily Monitoring Report</h3>
                         <p class="sub-text mb-10">Summary of all distress alerts, incidents, and responses recorded today.</p>
-                        <div class="card-buttons"><button class="btn-blue">View</button><button class="btn-green">Download PDF</button></div>
+                        <div class="card-buttons"><button class="btn-blue">View</button><button class="btn-green dl-pdf-btn">Download PDF</button></div>
                     </div>
                     <div class="panel">
                         <h3>Weekly Security Report</h3>
                         <p class="sub-text mb-10">Weekly analysis of distress detections, response times, and device activity.</p>
-                        <div class="card-buttons"><button class="btn-blue">View</button><button class="btn-green">Download PDF</button></div>
+                        <div class="card-buttons"><button class="btn-blue">View</button><button class="btn-green dl-pdf-btn">Download PDF</button></div>
                     </div>
                     <div class="panel">
                         <h3>Monthly Incident Report</h3>
                         <p class="sub-text mb-10">Comprehensive overview of incidents, emergency alerts, and security performance.</p>
-                        <div class="card-buttons"><button class="btn-blue">View</button><button class="btn-green">Download PDF</button></div>
+                        <div class="card-buttons"><button class="btn-blue">View</button><button class="btn-green dl-pdf-btn">Download PDF</button></div>
                     </div>
                 </div>
 

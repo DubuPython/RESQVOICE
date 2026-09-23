@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================================
-    // 2. Central State Management
+    // 2. Central State Management 
     // =========================================
     const defaultState = {
         alerts: [], 
@@ -31,17 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), message: 'System armed and awaiting alerts.' }
         ],
         stats: { resolvedCases: 0, totalIncidents: 0, avgResponse: 18, trends: [{ month: 'Current', count: 0 }] },
-        // Mock Data for New Views
-        users: [
-            { id: 'U1', initials: 'SA', name: 'Security Admin', role: 'Administrator', status: 'Active', color: 'bg-blue' },
-            { id: 'U2', initials: 'GA', name: 'Guard A', role: 'Security Personnel', status: 'Active', color: 'bg-purple' },
-            { id: 'U3', initials: 'GB', name: 'Guard B', role: 'Security Personnel', status: 'Active', color: 'bg-purple' }
-        ],
-        reports: [
-            { name: 'Daily Monitoring Report', date: 'May 30, 2026', type: 'Daily', status: 'Available' },
-            { name: 'Weekly Security Report', date: 'May 28, 2026', type: 'Weekly', status: 'Available' },
-            { name: 'Monthly Incident Report', date: 'May 01, 2026', type: 'Monthly', status: 'Available' }
-        ]
+        users: [],
+        reports: []
     };
 
     const savedData = localStorage.getItem('resqvoice_data');
@@ -51,8 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         GlobalState.devices = [{ id: 'ESP32 Main Unit', name: 'ESP32 Main Unit', status: 'Online', battery: 100, signal: 'Strong', location: 'Lab Room 1' }];
         localStorage.setItem('resqvoice_data', JSON.stringify(GlobalState));
     }
-    if (!GlobalState.users) GlobalState.users = defaultState.users;
-    if (!GlobalState.reports) GlobalState.reports = defaultState.reports;
+    if (!GlobalState.users) GlobalState.users = [];
+    if (!GlobalState.reports) GlobalState.reports = [];
 
     const saveState = () => { localStorage.setItem('resqvoice_data', JSON.stringify(GlobalState)); };
     const getFormattedDateTime = () => {
@@ -116,7 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
 
-        // Active Alerts Queue Table
         document.getElementById('aa-queue-table').innerHTML = activeAlerts.map(alert => `
             <tr>
                 <td>${alert.id}</td>
@@ -184,39 +174,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="bar-chart-label"><span>Possible Distress</span> <span>${possiblePct}%</span></div>
                 <div class="bar-chart-track"><div class="bar-chart-fill bg-warning" style="width: ${possiblePct}%;"></div></div>
             </div>
-            <div class="bar-chart-row">
-                <div class="bar-chart-label"><span>Resolved</span> <span>90%</span></div>
-                <div class="bar-chart-track"><div class="bar-chart-fill bg-green" style="width: 90%;"></div></div>
-            </div>
         `;
 
         // USER MANAGEMENT
-        document.getElementById('um-user-grid').innerHTML = GlobalState.users.map(u => `
-            <div class="alert-card">
-                <div class="user-avatar ${u.color}">${u.initials}</div>
-                <h3>${u.name}</h3>
-                <span class="badge ${u.role === 'Administrator' ? 'btn-blue' : 'btn-green'} mb-10" style="display:inline-block; width:fit-content;">${u.role}</span>
-                <p class="green mt-10">● ${u.status}</p>
-                <div class="card-buttons">
-                    <button class="btn-blue">Edit</button>
-                    <button class="btn-red">Disable</button>
+        document.getElementById('um-total-users').innerText = GlobalState.users.length;
+        document.getElementById('um-admin-users').innerText = GlobalState.users.filter(u => u.role === 'Administrator').length;
+        document.getElementById('um-guard-users').innerText = GlobalState.users.filter(u => u.role === 'Security Personnel').length;
+
+        if (GlobalState.users.length === 0) {
+            document.getElementById('um-user-grid').innerHTML = `<p style="color:var(--text-muted);">No users found. Click "+ Add User" to create one.</p>`;
+        } else {
+            document.getElementById('um-user-grid').innerHTML = GlobalState.users.map(u => `
+                <div class="alert-card">
+                    <div class="user-avatar ${u.color}">${u.initials}</div>
+                    <h3>${u.name}</h3>
+                    <span class="badge ${u.role === 'Administrator' ? 'btn-blue' : 'btn-green'} mb-10" style="display:inline-block; width:fit-content;">${u.role}</span>
+                    <p class="green mt-10">● ${u.status}</p>
+                    <div class="card-buttons">
+                        <button class="btn-red disable-user-btn" data-id="${u.id}">Disable</button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('');
+        }
 
         // REPORTS MANAGEMENT
-        document.getElementById('rm-report-table').innerHTML = GlobalState.reports.map(r => `
-            <tr>
-                <td>${r.name}</td>
-                <td>${r.date}</td>
-                <td>${r.type}</td>
-                <td>${r.status}</td>
-            </tr>
-        `).join('');
+        document.getElementById('rm-total').innerText = GlobalState.reports.length;
+        document.getElementById('rm-daily').innerText = GlobalState.reports.filter(r => r.type === 'Daily').length;
+        document.getElementById('rm-weekly').innerText = GlobalState.reports.filter(r => r.type === 'Weekly').length;
+        document.getElementById('rm-monthly').innerText = GlobalState.reports.filter(r => r.type === 'Monthly').length;
+
+        if (GlobalState.reports.length === 0) {
+            document.getElementById('rm-report-table').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No historical reports generated yet.</td></tr>`;
+        } else {
+            document.getElementById('rm-report-table').innerHTML = GlobalState.reports.map(r => `
+                <tr><td>${r.name}</td><td>${r.date}</td><td>${r.type}</td><td>${r.status}</td></tr>
+            `).join('');
+        }
     };
 
     // =========================================
-    // 4. Action Handlers
+    // 4. Action Handlers 
     // =========================================
     const modal = document.getElementById('action-modal');
     const openModal = (title, content) => {
@@ -230,6 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('click', (e) => {
+        
+        // --- DEVICE ACTIONS ---
         if (e.target.classList.contains('edit-device-btn')) {
             const id = e.target.getAttribute('data-id');
             const device = GlobalState.devices.find(d => d.id === id);
@@ -269,7 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.classList.contains('respond-btn')) {
             const id = e.target.getAttribute('data-id');
             const alertIndex = GlobalState.alerts.findIndex(a => a.id === id);
-            
             if (alertIndex > -1) {
                 const alert = GlobalState.alerts[alertIndex];
                 if (alert.level === 'Critical') {
@@ -296,6 +294,69 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // --- USER MANAGEMENT ACTIONS ---
+        if (e.target.id === 'add-user-btn') {
+            const formHtml = `
+                <div style="display:flex; flex-direction:column; gap:15px;">
+                    <input type="text" id="new-user-name" placeholder="Full Name (e.g. John Doe)" style="padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:white;">
+                    <select id="new-user-role" style="padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:white;">
+                        <option value="Security Personnel">Security Personnel</option>
+                        <option value="Administrator">Administrator</option>
+                    </select>
+                    <button id="save-user-btn" class="btn-blue" style="margin-top:10px;">Create User</button>
+                </div>
+            `;
+            openModal('Add New Personnel', formHtml);
+        }
+
+        if (e.target.id === 'save-user-btn') {
+            const name = document.getElementById('new-user-name').value;
+            const role = document.getElementById('new-user-role').value;
+            if (name.trim() !== '') {
+                GlobalState.users.push({
+                    id: 'U' + Date.now(),
+                    initials: name.substring(0, 2).toUpperCase(),
+                    name: name,
+                    role: role,
+                    status: 'Active',
+                    color: role === 'Administrator' ? 'bg-blue' : 'bg-purple'
+                });
+                saveState();
+                renderApp();
+                modal.style.display = 'none';
+            }
+        }
+
+        if (e.target.classList.contains('disable-user-btn')) {
+            const id = e.target.getAttribute('data-id');
+            GlobalState.users = GlobalState.users.filter(u => u.id !== id);
+            saveState();
+            renderApp();
+        }
+
+        // --- REPORT ACTIONS ---
+        if (e.target.innerText === 'Download PDF' || e.target.classList.contains('dl-pdf-btn')) {
+            const reportName = e.target.parentElement.parentElement.querySelector('h3').innerText;
+            const reportType = reportName.includes('Daily') ? 'Daily' : (reportName.includes('Weekly') ? 'Weekly' : 'Monthly');
+            
+            GlobalState.reports.unshift({
+                name: reportName,
+                date: getFormattedDateTime().split(' - ')[0],
+                type: reportType,
+                status: 'Available'
+            });
+            saveState();
+            renderApp();
+            
+            // Triggers the browser's PDF Print Dialog
+            window.print(); 
+        }
+
+        if (e.target.innerText === 'View') {
+            openModal('Report Viewer', '<p style="color:var(--text-muted);">PDF generation preview is currently locked to Admin accounts. Use "Download PDF" to export the dashboard view directly.</p>');
+        }
+
+        // --- SYSTEM RESET ---
         if (e.target.id === 'reset-test-data-btn') {
             const confirmWipe = confirm("⚠️ WARNING: This will permanently wipe all alerts from both your dashboard and the Firebase database. Continue?");
             if (confirmWipe) {

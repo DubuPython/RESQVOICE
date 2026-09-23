@@ -1,17 +1,17 @@
 /* --- BASE & THEME --- */
 :root {
-    --bg-base: #0f1523; /* Deep dark blue background */
-    --bg-panel: #1a2235; /* Slightly lighter blue panel */
+    --bg-base: #0f1523; 
+    --bg-panel: #1a2235; 
     --bg-hover: #26334d;
     --text-main: #f8fafc;
     --text-muted: #8b99b4;
     
-    --primary: #3b82f6; /* Action Blue */
+    --primary: #3b82f6; 
     --primary-hover: #2563eb;
-    --danger: #ef4444; /* Critical Red */
+    --danger: #ef4444; 
     --danger-hover: #dc2626;
-    --success: #10b981; /* Online/Resolved Green */
-    --warning: #f59e0b; /* Yellow */
+    --success: #10b981; 
+    --warning: #f59e0b; 
     --border: rgba(255, 255, 255, 0.05);
 }
 
@@ -149,3 +149,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
 .close-modal { font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
 .close-modal:hover { color: white; }
+
+/* --- PRINT STYLES FOR PDF REPORTS --- */
+@media print {
+    body { background: white; color: black; }
+    .sidebar, .card-buttons, #action-modal, button { display: none !important; }
+    .app-container { height: auto; overflow: visible; }
+    .content-area { padding: 0; background: white; }
+    .stat-card, .panel, .alert-card { border: 1px solid #ccc; box-shadow: none; background: white; color: black; break-inside: avoid; }
+    h1, h2, h3, p, span, td, th { color: black !important; }
+    .bg-red, .bg-warning, .bg-green, .badge { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
