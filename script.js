@@ -19,27 +19,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================================
-    // 2. Central State Management
+    // 2. Central State Management (With LocalStorage)
     // =========================================
-    const GlobalState = {
+    // Default state if no saved data exists
+    const defaultState = {
         alerts: [], 
         history: [],
         devices: [
-            // "id" is the immutable hardware link to the ESP32. 
-            // "name" is the display name you can edit on the dashboard.
             { id: 'ESP32 Main Unit', name: 'ESP32 Main Unit', status: 'Online', battery: 100, signal: 'Strong', location: 'Lab Room 1' }
         ],
         recentActivity: [
             { time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), message: 'System armed and awaiting alerts.' }
         ],
-        stats: {
-            resolvedCases: 0,
-            totalIncidents: 0,
-            avgResponse: 0,
-            trends: [
-                { month: 'Current', count: 0, width: 5 }
-            ]
-        }
+        stats: { resolvedCases: 0, totalIncidents: 0, avgResponse: 0, trends: [{ month: 'Current', count: 0, width: 5 }] }
+    };
+
+    // Pull from browser memory if available, otherwise use defaults
+    const savedData = localStorage.getItem('resqvoice_data');
+    const GlobalState = savedData ? JSON.parse(savedData) : defaultState;
+
+    // Helper function to save changes to the browser
+    const saveState = () => {
+        localStorage.setItem('resqvoice_data', JSON.stringify(GlobalState));
     };
 
     const getFormattedDateTime = () => {
@@ -49,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // =========================================
-    // 3. Render Functions (Syncs UI to State)
+    // 3. Render Functions
     // =========================================
     const renderApp = () => {
         const activeAlerts = GlobalState.alerts.filter(a => a.status === 'Pending' || a.status === 'Investigating' || a.status === 'Responding');
@@ -76,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <li><span class="time">${act.time}</span><p>${act.message}</p></li>
         `).join('');
 
-        // Uses d.name instead of d.id so it shows your custom name
         document.getElementById('dashboard-devices-mini').innerHTML = GlobalState.devices.map(d => `
             <tr>
                 <td>${d.name}</td>
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
 
-        // DEVICE MANAGEMENT UPDATES (Uses d.name)
+        // DEVICE MANAGEMENT UPDATES
         document.getElementById('dm-device-grid').innerHTML = GlobalState.devices.map(d => `
             <div class="alert-card ${d.status === 'Online' ? 'border-green' : 'border-red'}">
                 <h3>${d.name}</h3>
@@ -169,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('click', (e) => {
-        // Open Edit Device Modal (Now edits "name" instead of "id")
         if (e.target.classList.contains('edit-device-btn')) {
             const id = e.target.getAttribute('data-id');
             const device = GlobalState.devices.find(d => d.id === id);
@@ -187,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Save Edit Device Changes
         if (e.target.id === 'save-device-btn') {
             const oldId = e.target.getAttribute('data-old-id');
             const newName = document.getElementById('edit-dev-name').value;
@@ -195,14 +193,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const deviceIndex = GlobalState.devices.findIndex(d => d.id === oldId);
             if (deviceIndex > -1) {
-                GlobalState.devices[deviceIndex].name = newName; // Safely updates display name only
+                GlobalState.devices[deviceIndex].name = newName;
                 GlobalState.devices[deviceIndex].location = newLoc;
+                saveState(); // Saves the edit permanently
                 renderApp();
                 document.getElementById('action-modal').style.display = 'none';
             }
         }
 
-        // Respond Action
         if (e.target.classList.contains('respond-btn')) {
             const id = e.target.getAttribute('data-id');
             const alertIndex = GlobalState.alerts.findIndex(a => a.id === id);
@@ -212,35 +210,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (alert.level === 'Critical') {
                     alert.status = 'Resolved (Guards Dispatched)';
                     GlobalState.stats.resolvedCases++;
-                    GlobalState.history.unshift({ time: getFormattedDateTime(), classification: alert.classification, location: alert.location, status: 'Resolved' });
+                    GlobalState.history.unshift({ 
+                        firebaseId: alert.firebaseId, // Keeps the tracking ID
+                        time: getFormattedDateTime(), 
+                        classification: alert.classification, 
+                        location: alert.location, 
+                        status: 'Resolved' 
+                    });
                     GlobalState.recentActivity.unshift({ time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), message: `Personnel assigned and resolved Alert ${alert.id}` });
                     GlobalState.alerts.splice(alertIndex, 1);
                 } else {
                     alert.status = 'Investigating';
                 }
+                saveState(); // Saves the resolution history permanently
                 renderApp();
             }
         }
 
-        // Restart Device Action
         if (e.target.classList.contains('restart-btn')) {
             const id = e.target.getAttribute('data-id');
             const device = GlobalState.devices.find(d => d.id === id);
             if (device) {
                 device.status = 'Rebooting';
                 renderApp();
-                setTimeout(() => { device.status = 'Online'; renderApp(); }, 3000);
+                setTimeout(() => { 
+                    device.status = 'Online'; 
+                    saveState();
+                    renderApp(); 
+                }, 3000);
             }
-        }
-
-        // View Diagnostic Action
-        if (e.target.classList.contains('view-btn') || e.target.classList.contains('view-device')) {
-            const id = e.target.getAttribute('data-id');
-            openModal(`Viewing: ${id}`, `<p>Pulling full sensor diagnostic logs from database...</p><br><p>📡 <strong>Signal:</strong> Optimal</p><p>🕒 <strong>Uptime:</strong> Validated</p>`);
-        }
-
-        if (e.target.classList.contains('troubleshoot-btn')) {
-            openModal('Device Diagnostic', `<p>Unit is currently unreachable.</p><ul><li>Verify 3.3V power supply.</li><li>Check Firebase connection drops.</li></ul><p style="color: var(--accent-red);">Recommendation: Physical reboot required.</p>`);
         }
     });
 
@@ -285,19 +283,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('login-btn').addEventListener('click', () => {
-        auth.signInWithEmailAndPassword(emailInput.value, passInput.value)
-            .catch((error) => {
-                authError.innerText = error.message;
-                authError.style.display = 'block';
-            });
+        auth.signInWithEmailAndPassword(emailInput.value, passInput.value).catch((error) => { authError.innerText = error.message; authError.style.display = 'block'; });
     });
 
     document.getElementById('signup-btn').addEventListener('click', () => {
-        auth.createUserWithEmailAndPassword(emailInput.value, passInput.value)
-            .catch((error) => {
-                authError.innerText = error.message;
-                authError.style.display = 'block';
-            });
+        auth.createUserWithEmailAndPassword(emailInput.value, passInput.value).catch((error) => { authError.innerText = error.message; authError.style.display = 'block'; });
     });
 
     document.getElementById('logout-btn').addEventListener('click', (e) => {
@@ -305,26 +295,33 @@ document.addEventListener('DOMContentLoaded', () => {
         auth.signOut();
     });
 
-    // --- DATABASE LISTENER (Patched for custom names) ---
+    // --- DATABASE LISTENER (Patched for Refresh Duplicates) ---
     const listenForRealtimeAlerts = () => {
         const alertsRef = database.ref('alerts');
         
         alertsRef.on('child_added', (snapshot) => {
             const alertData = snapshot.val();
-            const newId = `AL-${Math.floor(Math.random() * 900) + 100}`;
-            
-            // Link the incoming ESP32 payload to the correct device hardware ID
+            const firebaseKey = snapshot.key; 
+
+            // DUPLICATE CHECK: If we already loaded this exact alert from LocalStorage, ignore it.
+            const alreadyExists = GlobalState.alerts.some(a => a.firebaseId === firebaseKey) || 
+                                  GlobalState.history.some(h => h.firebaseId === firebaseKey);
+            if (alreadyExists) return;
+
             const incomingHardwareId = alertData.location || "ESP32 Main Unit";
             const targetDevice = GlobalState.devices.find(d => d.id === incomingHardwareId);
             
-            // Extract the user-edited location and name for the UI
             const dynamicLocation = targetDevice ? targetDevice.location : "Unknown Location";
             const dynamicDeviceName = targetDevice ? targetDevice.name : incomingHardwareId;
             const dynamicTime = alertData.time || getFormattedDateTime().split(' - ')[1];
+            
+            // Generate a clean dashboard ID using a slice of the Firebase key
+            const displayId = `AL-${firebaseKey.substring(1, 5).toUpperCase()}`;
 
             GlobalState.alerts.unshift({
-                id: newId,
-                location: dynamicLocation, // Now displays "CR 1 Ground level"
+                id: displayId,
+                firebaseId: firebaseKey, // Store the real key to survive refreshes
+                location: dynamicLocation,
                 classification: alertData.level === 'Critical' ? 'Emergency Distress' : 'Possible Distress',
                 level: alertData.level || "Warning",
                 time: dynamicTime,
@@ -334,14 +331,15 @@ document.addEventListener('DOMContentLoaded', () => {
             GlobalState.stats.totalIncidents++;
             GlobalState.recentActivity.unshift({
                 time: dynamicTime,
-                // Now displays: "New Critical alert triggered at CR 1 Ground level (RESQVOICE SENSOR 1)"
                 message: `New ${alertData.level} alert triggered at ${dynamicLocation} (${dynamicDeviceName})`
             });
             
             if (GlobalState.recentActivity.length > 4) GlobalState.recentActivity.pop();
+            
+            saveState(); // Save the newly received alert to the browser
             renderApp(); 
         });
     };
 
-    renderApp();
+    renderApp(); // Initial Boot
 });
