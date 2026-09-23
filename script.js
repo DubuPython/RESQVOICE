@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================
     // 2. Central State Management (With LocalStorage)
     // =========================================
-    // Default state if no saved data exists
     const defaultState = {
         alerts: [], 
         history: [],
@@ -34,11 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
         stats: { resolvedCases: 0, totalIncidents: 0, avgResponse: 0, trends: [{ month: 'Current', count: 0, width: 5 }] }
     };
 
-    // Pull from browser memory if available, otherwise use defaults
     const savedData = localStorage.getItem('resqvoice_data');
     const GlobalState = savedData ? JSON.parse(savedData) : defaultState;
 
-    // Helper function to save changes to the browser
     const saveState = () => {
         localStorage.setItem('resqvoice_data', JSON.stringify(GlobalState));
     };
@@ -59,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalDevices = GlobalState.devices.length;
         const onlineDevices = GlobalState.devices.filter(d => d.status === 'Online').length;
 
-        // DASHBOARD UPDATES
         document.getElementById('dash-active-count').innerText = criticalCount;
         document.getElementById('dash-device-count').innerText = `${onlineDevices} / ${totalDevices}`;
         document.getElementById('dash-avg-response').innerText = `${GlobalState.stats.avgResponse}s`;
@@ -84,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </tr>
         `).join('');
 
-        // ACTIVE ALERTS PAGE UPDATES
         document.getElementById('aa-critical-count').innerText = criticalCount;
         document.getElementById('aa-warning-count').innerText = warningCount;
         document.getElementById('aa-resolved-count').innerText = GlobalState.stats.resolvedCases;
@@ -98,64 +93,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p><strong>Status:</strong> <span class="${alert.status.includes('Resolved') ? 'green' : ''}">${alert.status}</span></p>
                 <div class="card-buttons">
                     <button class="btn-blue view-btn" data-id="${alert.id}">View Details</button>
-                    ${alert.status === 'Pending' ? `<button class="${alert.level === 'Critical' ? 'btn-red' : 'btn-white'} respond-btn" data-id="${alert.id}">${alert.level === 'Critical' ? 'Respond' : 'Monitor'}</button>` : `<button class="btn-white" disabled style="opacity: 0.5;">Handled</button>`}
+                    ${alert.status === 'Pending' ? `<button class="${alert.level === 'Critical' ? 'btn-red' : 'btn-white'} respond-btn" data-id="${alert.id}">${alert.level === 'Critical' ? 'Respond' : 'Monitor'}</button>` : `<button class="btn-white" disabled>Handled</button>`}
                 </div>
             </div>
         `).join('');
 
-        // INCIDENT HISTORY UPDATES
         document.getElementById('ih-total-count').innerText = GlobalState.stats.totalIncidents;
         document.getElementById('ih-resolved-count').innerText = GlobalState.stats.resolvedCases;
         document.getElementById('ih-open-count').innerText = activeAlerts.length;
 
         document.getElementById('ih-timeline-container').innerHTML = GlobalState.history.map(hist => `
             <div class="timeline-item">
-                <p class="sub-text">${hist.time}</p>
+                <p class="time">${hist.time}</p>
                 <h3>${hist.classification}</h3>
                 <p>${hist.location} <br> Status: <strong>${hist.status}</strong></p>
             </div>
         `).join('');
 
-        // DEVICE MANAGEMENT UPDATES
         document.getElementById('dm-device-grid').innerHTML = GlobalState.devices.map(d => `
             <div class="alert-card ${d.status === 'Online' ? 'border-green' : 'border-red'}">
                 <h3>${d.name}</h3>
-                <p><strong>Status:</strong> <span class="${d.status === 'Online' ? 'green' : (d.status === 'Rebooting' ? 'text-secondary' : 'red')}">${d.status}</span></p>
+                <p><strong>Status:</strong> <span class="${d.status === 'Online' ? 'green' : (d.status === 'Rebooting' ? 'text-muted' : 'red')}">${d.status}</span></p>
                 <p><strong>Battery:</strong> ${d.battery}%</p>
                 <p><strong>Signal:</strong> ${d.signal}</p>
                 <p><strong>Location:</strong> ${d.location}</p>
                 <div class="card-buttons">
-                    <button class="btn-white edit-device-btn" data-id="${d.id}">Edit</button>
-                    <button class="btn-blue restart-btn" data-id="${d.id}" ${d.status==='Rebooting'?'disabled style="opacity:0.5"':''}>Restart</button>
+                    <button class="btn-white edit-device-btn" data-id="${d.id}">Edit Device</button>
+                    <button class="btn-blue restart-btn" data-id="${d.id}" ${d.status==='Rebooting'?'disabled':''}>Restart</button>
                 </div>
             </div>
         `).join('');
 
-        // ANALYTICS UPDATES
         const emergencyPct = Math.round((criticalCount / (criticalCount + warningCount || 1)) * 100);
         const possiblePct = 100 - emergencyPct;
         
         document.getElementById('an-monthly-trends').innerHTML = GlobalState.stats.trends.map(t => `
-            <div class="bar-chart-row">
-                <span class="label">${t.month}</span>
-                <div class="bar" style="width: ${t.width}%;">${t.count}</div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span>${t.month}</span>
+                <div style="background:var(--primary); height:100%; width:${t.width}%; border-radius:4px; padding:2px 8px; text-align:right;">${t.count}</div>
             </div>
         `).join('');
 
         document.getElementById('an-distribution').innerHTML = `
-            <div class="bar-chart-row">
-                <span class="label">Emergency</span>
-                <div class="bar bg-red" style="width: ${emergencyPct}%;">${emergencyPct}%</div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span>Emergency</span>
+                <div style="background:var(--danger); height:100%; width:${emergencyPct}%; border-radius:4px; padding:2px 8px; text-align:right;">${emergencyPct}%</div>
             </div>
-            <div class="bar-chart-row">
-                <span class="label">Possible</span>
-                <div class="bar bg-warning" style="width: ${possiblePct}%;">${possiblePct}%</div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span>Possible</span>
+                <div style="background:var(--warning); height:100%; width:${possiblePct}%; border-radius:4px; padding:2px 8px; text-align:right; color:#000;">${possiblePct}%</div>
             </div>
         `;
     };
 
     // =========================================
-    // 4. Action Handlers (Mutates State)
+    // 4. Action Handlers
     // =========================================
     const modal = document.getElementById('action-modal');
     const openModal = (title, content) => {
@@ -169,23 +161,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('click', (e) => {
+        // Edit Device
         if (e.target.classList.contains('edit-device-btn')) {
             const id = e.target.getAttribute('data-id');
             const device = GlobalState.devices.find(d => d.id === id);
             if (device) {
                 const formHtml = `
-                    <div style="display:flex; flex-direction:column; gap:10px;">
-                        <label style="color:var(--text-secondary); font-size:0.9rem;">Device Name</label>
-                        <input type="text" id="edit-dev-name" value="${device.name}" style="padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-main); color:white; font-size:1rem;">
-                        <label style="color:var(--text-secondary); font-size:0.9rem; margin-top:10px;">Deployment Location</label>
-                        <input type="text" id="edit-dev-loc" value="${device.location}" style="padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-main); color:white; font-size:1rem;">
-                        <button id="save-device-btn" class="btn-blue" data-old-id="${device.id}" style="margin-top:20px; padding:12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Save Changes</button>
+                    <div style="display:flex; flex-direction:column; gap:15px;">
+                        <div>
+                            <label style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px; display:block;">Device Name</label>
+                            <input type="text" id="edit-dev-name" value="${device.name}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:white;">
+                        </div>
+                        <div>
+                            <label style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px; display:block;">Deployment Location</label>
+                            <input type="text" id="edit-dev-loc" value="${device.location}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:white;">
+                        </div>
+                        <button id="save-device-btn" class="btn-blue" data-old-id="${device.id}" style="margin-top:10px;">Save Changes</button>
                     </div>
                 `;
                 openModal('Edit Device Settings', formHtml);
             }
         }
 
+        // Save Edit
         if (e.target.id === 'save-device-btn') {
             const oldId = e.target.getAttribute('data-old-id');
             const newName = document.getElementById('edit-dev-name').value;
@@ -195,12 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (deviceIndex > -1) {
                 GlobalState.devices[deviceIndex].name = newName;
                 GlobalState.devices[deviceIndex].location = newLoc;
-                saveState(); // Saves the edit permanently
+                saveState();
                 renderApp();
                 document.getElementById('action-modal').style.display = 'none';
             }
         }
 
+        // Respond to Alert
         if (e.target.classList.contains('respond-btn')) {
             const id = e.target.getAttribute('data-id');
             const alertIndex = GlobalState.alerts.findIndex(a => a.id === id);
@@ -210,34 +209,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (alert.level === 'Critical') {
                     alert.status = 'Resolved (Guards Dispatched)';
                     GlobalState.stats.resolvedCases++;
-                    GlobalState.history.unshift({ 
-                        firebaseId: alert.firebaseId, // Keeps the tracking ID
-                        time: getFormattedDateTime(), 
-                        classification: alert.classification, 
-                        location: alert.location, 
-                        status: 'Resolved' 
-                    });
+                    GlobalState.history.unshift({ firebaseId: alert.firebaseId, time: getFormattedDateTime(), classification: alert.classification, location: alert.location, status: 'Resolved' });
                     GlobalState.recentActivity.unshift({ time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), message: `Personnel assigned and resolved Alert ${alert.id}` });
                     GlobalState.alerts.splice(alertIndex, 1);
                 } else {
                     alert.status = 'Investigating';
                 }
-                saveState(); // Saves the resolution history permanently
+                saveState();
                 renderApp();
             }
         }
 
+        // Restart Device
         if (e.target.classList.contains('restart-btn')) {
             const id = e.target.getAttribute('data-id');
             const device = GlobalState.devices.find(d => d.id === id);
             if (device) {
                 device.status = 'Rebooting';
                 renderApp();
-                setTimeout(() => { 
-                    device.status = 'Online'; 
-                    saveState();
-                    renderApp(); 
-                }, 3000);
+                setTimeout(() => { device.status = 'Online'; saveState(); renderApp(); }, 3000);
             }
         }
     });
@@ -261,17 +251,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const authScreen = document.getElementById('auth-screen');
     const mainApp = document.getElementById('main-app');
-    const emailInput = document.getElementById('auth-email');
-    const passInput = document.getElementById('auth-password');
     const authError = document.getElementById('auth-error');
-    
     let isListening = false;
 
     auth.onAuthStateChanged((user) => {
         if (user) {
             authScreen.style.display = 'none';
             mainApp.style.display = 'flex';
-            
             if (!isListening) {
                 listenForRealtimeAlerts(); 
                 isListening = true;
@@ -283,11 +269,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('login-btn').addEventListener('click', () => {
-        auth.signInWithEmailAndPassword(emailInput.value, passInput.value).catch((error) => { authError.innerText = error.message; authError.style.display = 'block'; });
+        auth.signInWithEmailAndPassword(document.getElementById('auth-email').value, document.getElementById('auth-password').value)
+        .catch(error => { authError.innerText = error.message; authError.style.display = 'block'; });
     });
 
     document.getElementById('signup-btn').addEventListener('click', () => {
-        auth.createUserWithEmailAndPassword(emailInput.value, passInput.value).catch((error) => { authError.innerText = error.message; authError.style.display = 'block'; });
+        auth.createUserWithEmailAndPassword(document.getElementById('auth-email').value, document.getElementById('auth-password').value)
+        .catch(error => { authError.innerText = error.message; authError.style.display = 'block'; });
     });
 
     document.getElementById('logout-btn').addEventListener('click', (e) => {
@@ -295,15 +283,28 @@ document.addEventListener('DOMContentLoaded', () => {
         auth.signOut();
     });
 
-    // --- DATABASE LISTENER (Patched for Refresh Duplicates) ---
+    // --- RESET SYSTEM FEATURE ---
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'reset-test-data-btn') {
+            const confirmWipe = confirm("⚠️ WARNING: This will permanently wipe all alerts from both your dashboard and the Firebase database. Continue?");
+            
+            if (confirmWipe) {
+                database.ref('alerts').remove().then(() => {
+                    localStorage.removeItem('resqvoice_data');
+                    window.location.reload();
+                }).catch(error => {
+                    alert("Firebase Reset Error: " + error.message);
+                });
+            }
+        }
+    });
+
+    // --- DATABASE LISTENER ---
     const listenForRealtimeAlerts = () => {
-        const alertsRef = database.ref('alerts');
-        
-        alertsRef.on('child_added', (snapshot) => {
+        database.ref('alerts').on('child_added', (snapshot) => {
             const alertData = snapshot.val();
             const firebaseKey = snapshot.key; 
 
-            // DUPLICATE CHECK: If we already loaded this exact alert from LocalStorage, ignore it.
             const alreadyExists = GlobalState.alerts.some(a => a.firebaseId === firebaseKey) || 
                                   GlobalState.history.some(h => h.firebaseId === firebaseKey);
             if (alreadyExists) return;
@@ -314,13 +315,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const dynamicLocation = targetDevice ? targetDevice.location : "Unknown Location";
             const dynamicDeviceName = targetDevice ? targetDevice.name : incomingHardwareId;
             const dynamicTime = alertData.time || getFormattedDateTime().split(' - ')[1];
-            
-            // Generate a clean dashboard ID using a slice of the Firebase key
             const displayId = `AL-${firebaseKey.substring(1, 5).toUpperCase()}`;
 
             GlobalState.alerts.unshift({
                 id: displayId,
-                firebaseId: firebaseKey, // Store the real key to survive refreshes
+                firebaseId: firebaseKey,
                 location: dynamicLocation,
                 classification: alertData.level === 'Critical' ? 'Emergency Distress' : 'Possible Distress',
                 level: alertData.level || "Warning",
@@ -336,10 +335,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (GlobalState.recentActivity.length > 4) GlobalState.recentActivity.pop();
             
-            saveState(); // Save the newly received alert to the browser
+            saveState();
             renderApp(); 
         });
     };
 
-    renderApp(); // Initial Boot
+    renderApp(); 
 });
