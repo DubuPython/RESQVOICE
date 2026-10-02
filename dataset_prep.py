@@ -15,8 +15,10 @@ def process_audio_file(file_path, output_dir, class_name, filename):
         # Load audio: librosa automatically mixes to mono and resamples to target SR
         y, sr = librosa.load(file_path, sr=TARGET_SR, mono=True)
         
-        # Strip trailing silence to isolate the actual sound
-        y, _ = librosa.effects.trim(y, top_db=30)
+        # CRITICAL FIX: Only trim silence for keywords and screams. 
+        # Do NOT trim background noise (class_0), otherwise you train on pure digital silence!
+        if class_name != "class_0":
+            y, _ = librosa.effects.trim(y, top_db=30)
         
         total_samples = len(y)
         
