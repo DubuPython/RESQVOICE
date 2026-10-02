@@ -24,11 +24,10 @@ import {
 // 1. FIREBASE CONFIGURATION (REPLACE WITH YOUR OWN CREDENTIALS)
 // ==================================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyYOUR_API_KEY_HERE",
+  apiKey: "AIzaSyAiz2lYPjxDu8oqAynQMUWUqj29Zb6DJk8",
   authDomain: "resqvoice.firebaseapp.com",
   projectId: "resqvoice",
   storageBucket: "resqvoice.appspot.com",
-  messagingSenderId: "1234567890",
   appId: "1:1234567890:web:abcdef123456"
 };
 
