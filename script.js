@@ -23,12 +23,16 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.classList.add('active');
             
             viewSections.forEach(section => { section.style.display = 'none'; });
-            if (targetId) document.getElementById(targetId).style.display = 'flex';
+            if (targetId) {
+                document.getElementById(targetId).style.display = 'flex';
+                // Redraw chart if switching to analytics tab to prevent sizing bugs
+                if (targetId === 'view-analytics') renderChart();
+            }
         });
     });
 
     // =========================================
-    // 3. Central State Management (Crash Protection)
+    // 3. Central State Management
     // =========================================
     const defaultState = {
         alerts: [], 
@@ -60,12 +64,51 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const getFormattedDateTime = () => {
         const d = new Date();
-        return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+        return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
     };
 
     // =========================================
-    // 4. Render App (Draws the Dashboard)
+    // 4. Render App & Chart (Draws the Dashboard)
     // =========================================
+    let trendChart = null;
+
+    const renderChart = () => {
+        const container = document.getElementById('an-monthly-trends');
+        if (!container) return;
+
+        // Auto-inject canvas if it's missing in HTML
+        if (!document.getElementById('trend-chart')) {
+            container.innerHTML = '<canvas id="trend-chart" style="width: 100%; height: 100%;"></canvas>';
+        }
+
+        const ctx = document.getElementById('trend-chart');
+        
+        // Dynamic data array pulling from your GlobalState
+        const dataVals = [0, 0, 1, GlobalState.stats.totalIncidents]; 
+
+        if (trendChart) {
+            trendChart.data.datasets[0].data = dataVals;
+            trendChart.update();
+        } else {
+            trendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Current Week'],
+                    datasets: [{ label: 'Incidents', data: dataVals, backgroundColor: '#ef4444', borderRadius: 4 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#2a374f' } }, 
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } } 
+                    }
+                }
+            });
+        }
+    };
+
     const renderApp = () => {
         const activeAlerts = GlobalState.alerts.filter(a => a.status === 'Pending' || a.status === 'Investigating' || a.status === 'Responding');
         const criticalCount = activeAlerts.filter(a => a.level === 'Critical').length;
@@ -87,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </tr>
         `).join('');
         
-        // UI Fix: Adding space and styling between time and message
         document.getElementById('dashboard-activity').innerHTML = GlobalState.recentActivity.map(act => `
             <li>
                 <span style="color: var(--primary-accent); font-weight: 600; min-width: 80px; display: inline-block;">${act.time}</span> 
@@ -166,7 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('an-warning').innerText = GlobalState.alerts.filter(a => a.level === 'Warning').length + GlobalState.history.filter(h => h.classification === 'Possible Distress').length;
         document.getElementById('an-avg').innerText = `${GlobalState.stats.avgResponse}s`;
         
-        // USER MANAGEMENT (Synced via Firebase)
+        // Update Chart
+        renderChart();
+        
+        // USER MANAGEMENT
         document.getElementById('um-total-users').innerText = GlobalState.users.length;
         document.getElementById('um-admin-users').innerText = GlobalState.users.filter(u => u.role === 'Administrator').length;
         document.getElementById('um-guard-users').innerText = GlobalState.users.filter(u => u.role === 'Security Personnel').length;
@@ -185,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `).join('');
         }
         
-        // REPORTS MANAGEMENT
+        // REPORTS MANAGEMENT (Synced from Firebase now)
         document.getElementById('rm-total').innerText = GlobalState.reports.length;
         document.getElementById('rm-daily').innerText = GlobalState.reports.filter(r => r.type === 'Daily').length;
         document.getElementById('rm-weekly').innerText = GlobalState.reports.filter(r => r.type === 'Weekly').length;
@@ -199,7 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="color: white; font-weight: 500;">${r.name}</td>
                     <td>${r.date}</td>
                     <td><span class="badge" style="background-color: var(--bg-secondary); color: var(--primary-accent);">${r.type}</span></td>
-                    <td class="green">${r.status}</td>
+                    <td>
+                        <button class="btn-white no-print" onclick="window.print()" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Print</button>
+                    </td>
                 </tr>
             `).join('');
         }
@@ -235,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isListening) { 
                 listenForRealtimeAlerts(); 
                 listenForRealtimeUsers(); 
+                listenForRealtimeReports(); // NEW: Hook up report history
                 isListening = true; 
             }
         } else {
@@ -369,16 +417,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // --- REPORTS ---
+        // --- REPORTS (UPDATED TO SYNC TO FIREBASE) ---
         if (e.target.classList.contains('dl-pdf-btn')) {
             const reportName = e.target.parentElement.parentElement.querySelector('h3').innerText;
-            GlobalState.reports.unshift({ 
-                name: reportName, 
-                date: getFormattedDateTime().split(' - ')[0], 
-                type: reportName.includes('Daily') ? 'Daily' : (reportName.includes('Weekly') ? 'Weekly' : 'Monthly'), 
-                status: 'Available' 
-            });
-            saveState(); renderApp(); window.print(); 
+            
+            const newReport = {
+                name: reportName,
+                date: getFormattedDateTime(),
+                type: reportName.includes('Daily') ? 'Daily' : (reportName.includes('Weekly') ? 'Weekly' : 'Monthly'),
+                status: 'Available',
+                timestamp: Date.now()
+            };
+
+            const originalText = e.target.innerText;
+            e.target.innerText = "Saving...";
+            e.target.disabled = true;
+
+            // Push to Firebase Realtime Database
+            database.ref('reports').push(newReport)
+                .then(() => {
+                    window.print();
+                })
+                .catch((error) => {
+                    console.error("Database error: ", error);
+                    window.print(); // Print anyway if offline
+                })
+                .finally(() => {
+                    e.target.innerText = originalText;
+                    e.target.disabled = false;
+                });
         }
         
         // --- SYSTEM RESET ---
@@ -471,6 +538,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================
     // 8. Real-Time Listeners (Syncs Tables)
     // =========================================
+    
+    // NEW: Listen for Reports
+    const listenForRealtimeReports = () => {
+        database.ref('reports').on('value', (snapshot) => {
+            GlobalState.reports = []; 
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    GlobalState.reports.push(child.val());
+                });
+                // Sort by timestamp descending (newest first)
+                GlobalState.reports.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            }
+            saveState(); 
+            renderApp();
+        });
+    };
+
     const listenForRealtimeUsers = () => {
         database.ref('users').on('value', (snapshot) => {
             GlobalState.users = []; 

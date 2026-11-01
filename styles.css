@@ -306,4 +306,50 @@ input:focus, select:focus { border-color: var(--primary-accent); box-shadow: 0 0
   cursor: pointer;
   transition: var(--transition);
 }
+
 .close-modal:hover, .modal-close-icon:hover { color: var(--danger-red); transform: scale(1.1); }
+/* ================= PRINT / PDF EXPORT STYLES ================= */
+@media print {
+  /* 1. Force the browser to render your dark theme backgrounds and colors */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 2. Set standard document margins */
+  @page {
+    size: portrait;
+    margin: 15mm;
+  }
+
+  /* 3. Completely hide the navigation sidebar */
+  .sidebar {
+    display: none !important;
+  }
+
+  /* 4. Expand the main content to take up the full width of the PDF */
+  .app-container {
+    display: block !important; /* Disables flexbox layout for printing */
+  }
+  
+  .content-area {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    flex: none !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  /* 5. Prevent cards and tables from being sliced in half by page breaks */
+  .stat-card, .panel, .alert-card, .data-table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 20px !important;
+  }
+
+  /* 6. Hide buttons or elements that shouldn't appear in the final document */
+  .no-print {
+    display: none !important;
+  }
+}
