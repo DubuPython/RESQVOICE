@@ -209,7 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span style="font-size: 0.85rem; color: var(--text-muted);">Response: ${hist.responseTime !== undefined ? formatResponseTime(hist.responseTime) : 'N/A'}</span>
                 </div>
                 <h3 style="color: white; margin-bottom: 5px;">${hist.classification}</h3>
-                <p style="color: var(--text-muted);">${hist.location} • Status: <strong class="green">${hist.status}</strong></p>
+                <p style="color: var(--text-muted);">${hist.location}Status: <strong class="green">
+${hist.status}</strong></p>
             </div>
         `).join(''));
         
@@ -382,7 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.addEventListener('click', (e) => {
-        const btnNode = e.target.closest('button');
+        // FIX: Allow the profile link to trigger the event even if it isn't a <button>
+        const btnNode = e.target.closest('button, #profile-btn');
         if (!btnNode) return;
 
         // --- RESPOND TO CRITICAL OR RESOLVE WARNING ---
