@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Sorter Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --color-perfect: #4ade80; 
+            --color-raw: #facc15;     
+            --color-overbaked: #f87171; 
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
+        }
+
+        h1 { margin: 0; }
+
+        .total-section {
+            text-align: center;
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .total-section h2 { margin: 0 0 1rem 0; color: var(--text-muted); }
+        .total-count { font-size: 5rem; font-weight: bold; color: var(--text-main); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-top: 5px solid transparent;
+        }
+
+        .stat-card h3 { margin: 0 0 1rem 0; font-size: 1.5rem; color: var(--text-muted); }
+        .stat-card .counter { font-size: 3.5rem; font-weight: bold; }
+
+        .perfect { border-top-color: var(--color-perfect); }
+        .perfect .counter { color: var(--color-perfect); }
+        .raw { border-top-color: var(--color-raw); }
+        .raw .counter { color: var(--color-raw); }
+        .overbaked { border-top-color: var(--color-overbaked); }
+        .overbaked .counter { color: var(--color-overbaked); }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1>Production Feed</h1>
+            <div id="connectionStatus" style="font-size: 0.9rem; color: #a0a0a0; margin-top: 0.5rem;">
+                Status: Connecting...
+            </div>
+        </header>
+
+        <section class="total-section">
+            <h2>Total Processed</h2>
+            <div class="counter total-count" id="totalCount">0</div>
+        </section>
+
+        <section class="stats-grid">
+            <div class="stat-card raw">
+                <h3>Raw</h3>
+                <div class="counter" id="rawCount">0</div>
+            </div>
+            
+            <div class="stat-card perfect">
+                <h3>Perfect</h3>
+                <div class="counter" id="perfectCount">0</div>
+            </div>
+            
+            <div class="stat-card overbaked">
+                <h3>Overbaked</h3>
+                <div class="counter" id="overbakedCount">0</div>
+            </div>
+        </section>
+    </div>
+    
+    <script>
+        const wsUrl = `ws://${window.location.hostname}/ws`;
+        let socket;
+
+        function initWebSocket() {
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function() {
+                document.getElementById("connectionStatus").innerText = "Status: Connected";
+                document.getElementById("connectionStatus").style.color = "#4ade80";
+            };
+
+            socket.onclose = function() {
+                document.getElementById("connectionStatus").innerText = "Status: Reconnecting...";
+                document.getElementById("connectionStatus").style.color = "#f87171";
+                setTimeout(initWebSocket, 3000);
+            };
+
+            socket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.total !== undefined) document.getElementById("totalCount").innerText = data.total;
+                    if (data.raw !== undefined) document.getElementById("rawCount").innerText = data.raw;
+                    if (data.perfect !== undefined) document.getElementById("perfectCount").innerText = data.perfect;
+                    if (data.overbaked !== undefined) document.getElementById("overbakedCount").innerText = data.overbaked;
+                } catch (e) {
+                    console.error("Parse error:", e);
+                }
+            };
+        }
+        window.addEventListener('load', initWebSocket);
+    </script>
+</body>
+</html>
